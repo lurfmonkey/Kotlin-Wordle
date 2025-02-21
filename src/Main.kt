@@ -12,7 +12,6 @@ var prevGuesses = mutableListOf<String>()
 val qwertyKeyboard = "QWERTYUIOP\nASDFGHJKL\nZXCVBNM"
 
 fun main() {
-
     while (true) {
         // Choose a random word from a fixed list
         val correctWord = getRandomWord()

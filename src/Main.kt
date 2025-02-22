@@ -58,7 +58,7 @@ fun playGame(word: String) : Boolean {
             var analyzedGuess = ""
 
             // Format the guess to indicate which letters are in the word and/or correct
-            for (i in 0..4) {
+            for (i in guessResults.indices) {
                 when (guessResults[i]) {
                     0 -> {
                         // The letter is not in the word
@@ -126,19 +126,12 @@ fun checkGuess(guess: String, word: String) : MutableList<Int> {
     val guessResultsList: MutableList<Int> = mutableListOf(0, 0, 0, 0, 0)
     val correctLettersMap: MutableMap<Char, Int> = mutableMapOf()
 
-    for (i in 0..4) {
+    for (i in guess.indices) {
         //The letter is in the correct place
         if (guess[i] == word[i]) {
             //Keep track of number of correct occurrences
-            if (!correctLettersMap.containsKey(guess[i])) {
-                correctLettersMap[guess[i]] = 1
-            } else {
-                val flag = correctLettersMap[guess[i]]
+            correctLettersMap[guess[i]] = correctLettersMap.getOrDefault(guess[i], 0) + 1
 
-                if (flag != null) {
-                    correctLettersMap[guess[i]] = flag + 1
-                }
-            }
             // Flag letter as correctly guessed
             guessResultsList[i] = 2
 
@@ -147,21 +140,13 @@ fun checkGuess(guess: String, word: String) : MutableList<Int> {
         }
     }
     // Look for letters in the word but not in the right place
-    for (i in 0..4) {
-        for (j in 0..4) {
+    for (i in guess.indices) {
+        for (j in word.indices) {
             // The letter has been found in the word
             if (guess[i] == word[j]) {
                 // If not in the correct place, keep track of the number of occurrences
                 if (j != i) {
-                    if (!correctLettersMap.containsKey(guess[i])) {
-                        correctLettersMap[guess[i]] = 1
-                    } else {
-                        val flag = correctLettersMap[guess[i]]
-
-                        if (flag != null) {
-                            correctLettersMap[guess[i]] = flag + 1
-                        }
-                    }
+                    correctLettersMap[guess[i]] = correctLettersMap.getOrDefault(guess[i], 0) + 1
 
                     // Get the number of times the letter is in the word
                     val timesInWord = word.count { it == guess[i] }
@@ -181,25 +166,8 @@ fun checkGuess(guess: String, word: String) : MutableList<Int> {
     }
 
     // Update the map of letters guessed that are either in or not in the word
-    for (i in 0..4) {
-        when (guessResultsList[i]) {
-            0 -> {
-                if (!guessedLetters.containsKey(guess[i])) {
-                    guessedLetters[guess[i]] = 0
-                }
-            }
-
-            1 -> {
-                if (guessedLetters.containsKey(guess[i])) {
-                    // Flag the letter as in the word if it has not already been flagged as in the correct place
-                    if (guessedLetters[guess[i]] != 2) {
-                        guessedLetters[guess[i]] = 1
-                    }
-                } else {
-                    guessedLetters[guess[i]] = 1
-                }
-            }
-        }
+    for (i in guess.indices) {
+        guessedLetters[guess[i]] = maxOf(guessedLetters.getOrDefault(guess[i], 0), guessResultsList[i])
     }
 
     return guessResultsList

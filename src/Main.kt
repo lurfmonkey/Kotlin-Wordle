@@ -11,6 +11,12 @@ var prevGuesses = mutableListOf<String>()
 // The letters in each row of a QWERTY keyboard
 val qwertyKeyboard = "QWERTYUIOP\nASDFGHJKL\nZXCVBNM"
 
+// Letter background colors
+val redBkg = "\u001B[41m"
+val greenBkg = "\u001B[42m"
+val yellowBkg = "\u001B[43m"
+val colorEnd = "\u001B[0m"
+
 fun main() {
     while (true) {
         // Choose a random word from a fixed list
@@ -61,12 +67,12 @@ fun playGame(word: String) : Boolean {
                     1 -> {
                         // The letter is in the word but in the wrong place
                         // Indicate using yellow
-                        analyzedGuess += "\u001b[43m ${curGuess[i]} \u001b[0m"
+                        analyzedGuess += "$yellowBkg ${curGuess[i]} $colorEnd"
                     }
                     2 -> {
                         // The letter is in the word and in the correct place
                         // Indicate using green
-                        analyzedGuess += "\u001B[42m ${curGuess[i]} \u001B[0m"
+                        analyzedGuess += "$greenBkg ${curGuess[i]} $colorEnd"
                     }
                 }
             }
@@ -238,15 +244,15 @@ fun getFormattedAlphabet(keyboard: String, guessed: MutableMap<Char, Int>): Stri
             when(guessed[letter]) {
                 0 -> {
                     // The letter is not in the word
-                    formattedRow += "\u001B[41m $letter \u001B[0m"
+                    formattedRow += "$redBkg $letter $colorEnd"
                 }
                 1 -> {
                     // The letter is in the word but has not been guessed in the correct place
-                    formattedRow += "\u001B[43m $letter \u001B[0m"
+                    formattedRow += "$yellowBkg $letter $colorEnd"
                 }
                 2 -> {
                     // The letter has been guessed in the correct place
-                    formattedRow += "\u001B[42m $letter \u001B[0m"
+                    formattedRow += "$greenBkg $letter $colorEnd"
                 }
             }
         }
@@ -302,9 +308,9 @@ fun printInstructions() {
     println("|        KOTLIN WORDLE         |")
     println("--------------------------------")
     println("Guess a 5 letter word")
-    println("\u001B[43m   \u001B[0m indicates the letter is in the word but not in the correct place")
-    println("\u001B[42m   \u001B[0m indicates the letter is in the word in the correct place")
-    println("\u001B[41m   \u001B[0m indicates the letter is not in the word")
+    println("$yellowBkg   $colorEnd indicates the letter is in the word but not in the correct place")
+    println("$greenBkg   $colorEnd indicates the letter is in the word in the correct place")
+    println("$redBkg   $colorEnd indicates the letter is not in the word")
 
     showKeyboard()
 }

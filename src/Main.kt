@@ -1,31 +1,45 @@
+import java.io.*
 import java.util.*
 import java.net.URI
 import javax.net.ssl.HttpsURLConnection
-import java.io.OutputStreamWriter
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import java.io.File
 
 var guessedLetters = mutableMapOf<Char, Int>()
 var prevGuesses = mutableListOf<String>()
 
 // The letters in each row of a QWERTY keyboard
-val qwertyKeyboard = "QWERTYUIOP\nASDFGHJKL\nZXCVBNM"
+const val qwertyKeyboard = "QWERTYUIOP\nASDFGHJKL\nZXCVBNM"
 
 // Letter background colors
-val redBkg = "\u001B[41m"
-val greenBkg = "\u001B[42m"
-val yellowBkg = "\u001B[43m"
-val colorEnd = "\u001B[0m"
+const val redBkg = "\u001B[41m"
+const val greenBkg = "\u001B[42m"
+const val yellowBkg = "\u001B[43m"
+const val colorEnd = "\u001B[0m"
 
 fun main() {
-    while (true) {
+    // Get a list of words from a CSV file
+    var wordList: List<String>
+    try {
+        val wordFile = File("words.csv")
+        wordList = readWordsFromCsv(wordFile.inputStream())
+    } catch (e: Exception) {
+        println(e.message)
+        wordList = listOf("THREE", "GUESS", "BASIC")
+    }
+
+    var playAgain = true
+    while (playAgain) {
         // Choose a random word from a fixed list
-        val correctWord = getRandomWord()
+        val correctWord = wordList.random()
 
         // Play the game until the user no longer wants to play
-        if (!playGame(correctWord))
-            break
+        playAgain = playGame(correctWord)
     }
+}
+
+// Reads the words from a CSV file and returns them as a List
+fun readWordsFromCsv(inputStream: InputStream): List<String> {
+    return inputStream.bufferedReader().lineSequence().toList()
 }
 
 // Plays a game using the given word
@@ -59,21 +73,12 @@ fun playGame(word: String) : Boolean {
 
             // Format the guess to indicate which letters are in the word and/or correct
             for (i in guessResults.indices) {
-                when (guessResults[i]) {
-                    0 -> {
-                        // The letter is not in the word
-                        analyzedGuess += " ${curGuess[i]} "
-                    }
-                    1 -> {
-                        // The letter is in the word but in the wrong place
-                        // Indicate using yellow
-                        analyzedGuess += "$yellowBkg ${curGuess[i]} $colorEnd"
-                    }
-                    2 -> {
-                        // The letter is in the word and in the correct place
-                        // Indicate using green
-                        analyzedGuess += "$greenBkg ${curGuess[i]} $colorEnd"
-                    }
+                if (guessResults[i] > 0) {
+                    analyzedGuess += formatLetter(curGuess[i], guessResults[i])
+                }
+                else {
+                    // The letter is not in the word
+                    analyzedGuess += " ${curGuess[i]} "
                 }
             }
 
@@ -90,7 +95,7 @@ fun playGame(word: String) : Boolean {
             prevGuesses.add(analyzedGuess)
 
             // The word has been guessed correctly so end the game
-            if (guessResults == listOf(2, 2, 2, 2, 2)) {
+            if (curGuess == word) {
                 println("--------")
                 println("Correct!")
                 println("--------")
@@ -112,11 +117,23 @@ fun playGame(word: String) : Boolean {
 
     // Ask the user if they want to play again.
     print("Play again? Y/N ")
-    if (readln().uppercase() == "Y" )
-        return true
-    return false
+    return readln().uppercase() == "Y"
 }
 
+// Print a list of instructions
+fun printInstructions() {
+    println("--------------------------------")
+    println("|        KOTLIN WORDLE         |")
+    println("--------------------------------")
+    println("Guess a 5 letter word")
+    println("$yellowBkg   $colorEnd indicates the letter is in the word but not in the correct place")
+    println("$greenBkg   $colorEnd indicates the letter is in the word in the correct place")
+    println("$redBkg   $colorEnd indicates the letter is not in the word")
+
+    showKeyboard()
+}
+
+//region [Category: Guess handling]
 // Checks the guess to see which letters are in the word and in the right place
 fun checkGuess(guess: String, word: String) : MutableList<Int> {
     // List to store the state of each letter guessed
@@ -193,45 +210,6 @@ fun isValidGuess(guess: String?) : Boolean {
     return false
 }
 
-// Shows the keyboard with the state of each guessed letter
-fun showKeyboard() {
-    println("------------------------------")
-    println(getFormattedAlphabet(qwertyKeyboard, guessedLetters))
-    println("------------------------------")
-}
-
-// Formats the letters in the keyboard based on the state of each guessed letter
-// Green for letter guessed correctly in the right place
-// Yellow for letter guessed correctly but in the wrong place
-// Red for letter not in word
-// No background color for letters that have not yet been guessed
-fun getFormattedAlphabet(keyboard: String, guessed: MutableMap<Char, Int>): String {
-    var formattedRow = ""
-    for (letter in keyboard) {
-        if (letter in guessed) {
-            when(guessed[letter]) {
-                0 -> {
-                    // The letter is not in the word
-                    formattedRow += "$redBkg $letter $colorEnd"
-                }
-                1 -> {
-                    // The letter is in the word but has not been guessed in the correct place
-                    formattedRow += "$yellowBkg $letter $colorEnd"
-                }
-                2 -> {
-                    // The letter has been guessed in the correct place
-                    formattedRow += "$greenBkg $letter $colorEnd"
-                }
-            }
-        }
-        else {
-            formattedRow +=  if (letter != '\n') " $letter " else letter
-        }
-    }
-
-    return formattedRow
-}
-
 // Makes a JSON request to the given URL and returns the response in string form
 fun makeJsonRequest(url: String, method: String, jsonBody: String? = null): String? {
     return try {
@@ -269,74 +247,55 @@ fun makeJsonRequest(url: String, method: String, jsonBody: String? = null): Stri
         "Error: ${e.message}"
     }
 }
+//endregion [Category: Guess handling]
 
-// Print a list of instructions
-fun printInstructions() {
-    println("--------------------------------")
-    println("|        KOTLIN WORDLE         |")
-    println("--------------------------------")
-    println("Guess a 5 letter word")
-    println("$yellowBkg   $colorEnd indicates the letter is in the word but not in the correct place")
-    println("$greenBkg   $colorEnd indicates the letter is in the word in the correct place")
-    println("$redBkg   $colorEnd indicates the letter is not in the word")
-
-    showKeyboard()
+//region [Category: Letter formatting]
+// Shows the keyboard with the state of each guessed letter
+fun showKeyboard() {
+    println("------------------------------")
+    println(getFormattedAlphabet(qwertyKeyboard, guessedLetters))
+    println("------------------------------")
 }
 
-// Returns a random word from a fixed set
-fun getRandomWord(): String {
-    val possibleWords = setOf(
-        "CRAZY",
-        "THIEF",
-        "DOILY",
-        "FEAST",
-        "CIVIC",
-        "USURP",
-        "APTLY",
-        "GHOST",
-        "QUARK",
-        "PINCH",
-        "CHUCK",
-        "PLUMP",
-        "ASSET",
-        "CELLO",
-        "MOMMY",
-        "DENSE",
-        "COUNT",
-        "FIRST",
-        "THIRD",
-        "CHIEF",
-        "HEARD",
-        "DROWN",
-        "FREAK",
-        "VALVE",
-        "BRINK",
-        "HOARD",
-        "ANGLE",
-        "CLOUD",
-        "UNDER",
-        "WRIST",
-        "BLURB",
-        "CRAWL",
-        "AISLE",
-        "POUND",
-        "FRANK",
-        "EXACT",
-        "MIMIC",
-        "AVOID",
-        "PLAID",
-        "GROIN",
-        "CACAO",
-        "LANAI",
-        "CANAL",
-        "CRASH",
-        "GROUP",
-        "HIPPY",
-        "BEING",
-        "SHOOT",
-        "PLAZA",
-        "GHOUL"
-    )
+// Formats the letters in the keyboard based on the state of each guessed letter
+// Green for letter guessed correctly in the right place
+// Yellow for letter guessed correctly but in the wrong place
+// Red for letter not in word
+// No background color for letters that have not yet been guessed
+fun getFormattedAlphabet(keyboard: String, guessed: MutableMap<Char, Int>): String {
+    var formattedRow = ""
+    for (letter in keyboard) {
+        if (letter in guessed) {
+            formattedRow += formatLetter(letter, guessed[letter])
+        }
+        else {
+            formattedRow +=  if (letter != '\n') " $letter " else letter
+        }
+    }
 
-    return possibleWords.random()
+    return formattedRow
 }
+
+// Format a letter's background color based on the state
+fun formatLetter(letter: Char, state: Int?): String {
+    var formattedLetter : String = letter.toString()
+
+    when(state) {
+        0 -> {
+            // The letter is not in the word
+            formattedLetter = "$redBkg $letter $colorEnd"
+        }
+
+        1 -> {
+            // The letter is in the word but has not been guessed in the correct place
+            formattedLetter = "$yellowBkg $letter $colorEnd"
+        }
+
+        2 -> {
+            // The letter has been guessed in the correct place
+            formattedLetter = "$greenBkg $letter $colorEnd"
+        }
+    }
+    return formattedLetter
+}
+//endregion [Category: Letter formatting]
